@@ -8,12 +8,14 @@
     "author": "NextERP Romania," "Odoo Community Association (OCA)",
     "website": "https://github.com/OCA/l10n-romania",
     "depends": [
-        "l10n_ro_stock_account",
-        "stock_landed_costs",
+        "purchase_stock",
+        "sale_stock",
+        "stock_picking_comment_template",
     ],
     "excludes": ["stock_picking_report_valued"],
     "license": "AGPL-3",
     "data": [
+        "data/l10n_ro_stock_picking_comment_template.xml",
         "report/stock_picking_report_valued.xml",
     ],
     "installable": True,

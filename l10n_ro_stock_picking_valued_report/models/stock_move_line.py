@@ -6,7 +6,7 @@ from odoo import api, fields, models
 
 class StockMoveLine(models.Model):
     _name = "stock.move.line"
-    _inherit = ["stock.move.line", "l10n.ro.mixin"]
+    _inherit = "stock.move.line"
 
     l10n_ro_sale_line_id = fields.Many2one(
         related="move_id.sale_line_id", readonly=True, string="Related order line"
@@ -37,11 +37,6 @@ class StockMoveLine(models.Model):
         readonly=True,
         currency_field="l10n_ro_currency_id",
     )
-    l10n_ro_additional_charges = fields.Monetary(
-        compute="_compute_l10n_ro_valued_fields",
-        readonly=True,
-        currency_field="l10n_ro_currency_id",
-    )
 
     def _get_move_line_quantity(self):
         return self.quantity or self.reserved_qty
@@ -58,7 +53,6 @@ class StockMoveLine(models.Model):
     def _compute_l10n_ro_valued_fields(self):
         for line in self:
             move_qty = line._get_move_line_quantity()
-            line.l10n_ro_additional_charges = 0
             if line.l10n_ro_sale_line_id:
                 sale_line = line.l10n_ro_sale_line_id
                 line.l10n_ro_currency_id = sale_line.currency_id
@@ -83,33 +77,14 @@ class StockMoveLine(models.Model):
                 )
             else:
                 svls = line.move_id.stock_valuation_layer_ids
-
-                svls_lc_not_same_invoice = self.env["stock.valuation.layer"]
                 price_unit = 0
                 if svls:
-                    if svls[0].l10n_ro_valued_type == "internal_transfer":
-                        svls = svls.filtered(lambda s: s.quantity > 0)
-                    if svls[0].stock_move_id._is_in():
-                        svls_lc_not_same_invoice = svls.filtered(
-                            lambda s, svls=svls: (
-                                s.stock_landed_cost_id
-                                and s.stock_landed_cost_id.l10n_ro_cost_type == "normal"
-                                and s.stock_landed_cost_id.vendor_bill_id
-                                and s.stock_landed_cost_id.vendor_bill_id
-                                != svls[0].l10n_ro_invoice_id
-                            )
-                        )
-                        svls = svls - svls_lc_not_same_invoice
-
                     if sum(svls.mapped("quantity")):
                         price_unit = sum(svls.mapped("value")) / sum(
                             svls.mapped("quantity")
                         )
                 line.l10n_ro_currency_id = line.company_id.currency_id
                 line.l10n_ro_price_unit = price_unit
-                line.l10n_ro_additional_charges = sum(
-                    svls_lc_not_same_invoice.mapped("value")
-                )
                 line.l10n_ro_price_subtotal = move_qty * line.l10n_ro_price_unit
                 line.l10n_ro_price_tax = 0
                 if line.l10n_ro_purchase_line_id and svls:
@@ -139,7 +114,6 @@ class StockMoveLine(models.Model):
                 "currency"
             ] = self.env.company.currency_id.id
             agg_move_lines[aggregated_move_line]["l10n_ro_price_unit"] = 0
-            agg_move_lines[aggregated_move_line]["l10n_ro_additional_charges"] = 0
             agg_move_lines[aggregated_move_line]["l10n_ro_price_subtotal"] = 0
             agg_move_lines[aggregated_move_line]["l10n_ro_price_tax"] = 0
             agg_move_lines[aggregated_move_line]["l10n_ro_price_total"] = 0
@@ -151,9 +125,6 @@ class StockMoveLine(models.Model):
             agg_line = agg_move_lines[line_key]
             agg_line["l10n_ro_currency_id"] = move_line.l10n_ro_currency_id.id
             agg_line["l10n_ro_price_unit"] += move_line.l10n_ro_price_unit
-            agg_line[
-                "l10n_ro_additional_charges"
-            ] += move_line.l10n_ro_additional_charges
             agg_line["l10n_ro_price_subtotal"] += move_line.l10n_ro_price_subtotal
             agg_line["l10n_ro_price_tax"] += move_line.l10n_ro_price_tax
             agg_line["l10n_ro_price_total"] += move_line.l10n_ro_price_total

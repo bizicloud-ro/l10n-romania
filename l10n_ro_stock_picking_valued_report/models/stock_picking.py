@@ -6,7 +6,7 @@ from odoo import api, fields, models
 
 class StockPicking(models.Model):
     _name = "stock.picking"
-    _inherit = ["stock.picking", "l10n.ro.mixin"]
+    _inherit = "stock.picking"
 
     l10n_ro_currency_id = fields.Many2one(
         "res.currency",
@@ -32,7 +32,14 @@ class StockPicking(models.Model):
         compute_sudo=True,
         currency_field="l10n_ro_currency_id",
     )
+    is_l10n_ro_record = fields.Boolean(compute="_compute_is_l10n_ro_record")
     l10n_ro_is_internal = fields.Boolean(compute="_compute_l10n_ro_is_internal")
+
+    def _compute_is_l10n_ro_record(self):
+        for picking in self:
+            picking.is_l10n_ro_record = (
+                picking.company_id.account_fiscal_country_id.code == "RO"
+            )
 
     def _compute_l10n_ro_is_internal(self):
         for pick in self:
