@@ -122,10 +122,11 @@ class StockMoveLine(models.Model):
                 move_line=move_line
             )
             line_key = aggregated_properties["line_key"]
-            agg_line = agg_move_lines[line_key]
-            agg_line["l10n_ro_currency_id"] = move_line.l10n_ro_currency_id.id
-            agg_line["l10n_ro_price_unit"] += move_line.l10n_ro_price_unit
-            agg_line["l10n_ro_price_subtotal"] += move_line.l10n_ro_price_subtotal
-            agg_line["l10n_ro_price_tax"] += move_line.l10n_ro_price_tax
-            agg_line["l10n_ro_price_total"] += move_line.l10n_ro_price_total
+            agg_line = agg_move_lines.get(line_key)
+            if agg_line:
+                agg_line["l10n_ro_currency_id"] = move_line.l10n_ro_currency_id.id
+                agg_line["l10n_ro_price_unit"] += move_line.l10n_ro_price_unit
+                agg_line["l10n_ro_price_subtotal"] += move_line.l10n_ro_price_subtotal
+                agg_line["l10n_ro_price_tax"] += move_line.l10n_ro_price_tax
+                agg_line["l10n_ro_price_total"] += move_line.l10n_ro_price_total
         return agg_move_lines
