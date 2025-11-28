@@ -38,9 +38,6 @@ class StockMoveLine(models.Model):
         currency_field="l10n_ro_currency_id",
     )
 
-    def _get_move_line_quantity(self):
-        return self.quantity or self.reserved_qty
-
     @api.depends(
         "l10n_ro_sale_line_id",
         "l10n_ro_purchase_line_id",
@@ -52,7 +49,7 @@ class StockMoveLine(models.Model):
     )
     def _compute_l10n_ro_valued_fields(self):
         for line in self:
-            move_qty = line._get_move_line_quantity()
+            move_qty = line.quantity
             if line.l10n_ro_sale_line_id:
                 sale_line = line.l10n_ro_sale_line_id
                 line.l10n_ro_currency_id = sale_line.currency_id
