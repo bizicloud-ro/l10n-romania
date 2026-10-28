@@ -87,6 +87,27 @@ class TestPickingValued(TransactionCase):
             picking.comment_template_ids,
         )
 
+    def test_line_without_quantity_is_not_valued(self):
+        self.env["stock.quant"]._update_available_quantity(
+            self.product, self.warehouse.lot_stock_id, 10
+        )
+        sale = self.env["sale.order"].create(
+            {
+                "partner_id": self.partner.id,
+                "order_line": [
+                    Command.create(
+                        {"product_id": self.product.id, "product_uom_qty": 3}
+                    )
+                ],
+            }
+        )
+        sale.action_confirm()
+        move_line = sale.picking_ids.move_line_ids
+        move_line.quantity = 0
+
+        self.assertEqual(move_line.l10n_ro_price_subtotal, 0)
+        self.assertEqual(sale.picking_ids.l10n_ro_amount_total, 0)
+
     def test_aggregation_skips_packed_lines(self):
         self.env["stock.quant"]._update_available_quantity(
             self.product, self.warehouse.lot_stock_id, 10

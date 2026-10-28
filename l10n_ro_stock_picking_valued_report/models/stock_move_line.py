@@ -72,11 +72,10 @@ class StockMoveLine(models.Model):
         Every unit price this module works with - the sale line price
         converted with ``_compute_price``, and ``value / _get_valued_qty()``
         coming from ``_get_value_data`` - is per product UoM, so the quantity
-        it multiplies must be too. ``quantity``/``reserved_qty`` are stored in
-        the line's own UoM."""
-        qty = self.quantity or self.reserved_qty
+        it multiplies must be too. ``quantity`` is stored in the line's own
+        UoM."""
         return self.product_uom_id._compute_quantity(
-            qty, self.product_id.uom_id, round=False
+            self.quantity, self.product_id.uom_id, round=False
         )
 
     def _get_l10n_ro_values_from_sale_line(self):
