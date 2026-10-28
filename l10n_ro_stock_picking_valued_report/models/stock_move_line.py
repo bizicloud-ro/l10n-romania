@@ -9,7 +9,7 @@ _logger = logging.getLogger(__name__)
 
 class StockMoveLine(models.Model):
     _name = "stock.move.line"
-    _inherit = ["stock.move.line", "l10n.ro.mixin"]
+    _inherit = "stock.move.line"
 
     l10n_ro_sale_line_id = fields.Many2one(
         related="move_id.sale_line_id", readonly=True, string="Related order line"
@@ -40,11 +40,6 @@ class StockMoveLine(models.Model):
         readonly=True,
         currency_field="l10n_ro_currency_id",
     )
-    l10n_ro_additional_charges = fields.Monetary(
-        compute="_compute_l10n_ro_valued_fields",
-        readonly=True,
-        currency_field="l10n_ro_currency_id",
-    )
 
     def _get_aggregated_product_quantities(self, **kwargs):
         agg_move_lines = super()._get_aggregated_product_quantities(**kwargs)
@@ -54,7 +49,6 @@ class StockMoveLine(models.Model):
                 self.env.company.currency_id.id
             )
             agg_move_lines[aggregated_move_line]["l10n_ro_price_unit"] = 0
-            agg_move_lines[aggregated_move_line]["l10n_ro_additional_charges"] = 0
             agg_move_lines[aggregated_move_line]["l10n_ro_price_subtotal"] = 0
             agg_move_lines[aggregated_move_line]["l10n_ro_price_tax"] = 0
             agg_move_lines[aggregated_move_line]["l10n_ro_price_total"] = 0
@@ -66,9 +60,6 @@ class StockMoveLine(models.Model):
             agg_line = agg_move_lines[line_key]
             agg_line["l10n_ro_currency_id"] = move_line.l10n_ro_currency_id.id
             agg_line["l10n_ro_price_unit"] += move_line.l10n_ro_price_unit
-            agg_line["l10n_ro_additional_charges"] += (
-                move_line.l10n_ro_additional_charges
-            )
             agg_line["l10n_ro_price_subtotal"] += move_line.l10n_ro_price_subtotal
             agg_line["l10n_ro_price_tax"] += move_line.l10n_ro_price_tax
             agg_line["l10n_ro_price_total"] += move_line.l10n_ro_price_total
@@ -122,7 +113,6 @@ class StockMoveLine(models.Model):
             "l10n_ro_price_subtotal": price_subtotal,
             "l10n_ro_price_tax": price_tax,
             "l10n_ro_price_total": price_total,
-            "l10n_ro_additional_charges": 0,
         }
 
     def _get_l10n_ro_values_from_purchase_line(self):
@@ -154,7 +144,6 @@ class StockMoveLine(models.Model):
                     "l10n_ro_price_subtotal",
                     "l10n_ro_price_tax",
                     "l10n_ro_price_total",
-                    "l10n_ro_additional_charges",
                 ]
             }
         return move_values
@@ -165,7 +154,6 @@ class StockMoveLine(models.Model):
         stock_move = self.move_id
         currency = self.company_id.currency_id
         sm_value = stock_move._get_value_data(add_extra_value=False)
-        sm_value_with_extra = stock_move._get_value_data(add_extra_value=True)
         if not sm_value.get("quantity"):
             return {
                 "l10n_ro_currency_id": stock_move.company_id.currency_id.id,
@@ -173,19 +161,15 @@ class StockMoveLine(models.Model):
                 "l10n_ro_price_subtotal": 0,
                 "l10n_ro_price_tax": 0,
                 "l10n_ro_price_total": 0,
-                "l10n_ro_additional_charges": 0,
             }
         value = sm_value.get("value", 0.0)
         price_unit = value / sm_value["quantity"]
-        extra_value = sm_value_with_extra.get("value", 0.0)
-        additional_charges = (extra_value - value) / sm_value["quantity"] * move_qty
         return {
             "l10n_ro_currency_id": currency.id,
             "l10n_ro_price_unit": price_unit,
             "l10n_ro_price_subtotal": move_qty * price_unit,
             "l10n_ro_price_tax": 0.0,
             "l10n_ro_price_total": move_qty * price_unit,
-            "l10n_ro_additional_charges": additional_charges,
         }
 
     @api.depends(
@@ -204,7 +188,6 @@ class StockMoveLine(models.Model):
                 "l10n_ro_price_subtotal": 0,
                 "l10n_ro_price_tax": 0,
                 "l10n_ro_price_total": 0,
-                "l10n_ro_additional_charges": 0,
             }
             if line.l10n_ro_sale_line_id:
                 sale_line_values = line._get_l10n_ro_values_from_sale_line()
