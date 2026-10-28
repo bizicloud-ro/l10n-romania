@@ -87,6 +87,30 @@ class TestPickingValued(TransactionCase):
             picking.comment_template_ids,
         )
 
+    def test_aggregation_skips_packed_lines(self):
+        self.env["stock.quant"]._update_available_quantity(
+            self.product, self.warehouse.lot_stock_id, 10
+        )
+        sale = self.env["sale.order"].create(
+            {
+                "partner_id": self.partner.id,
+                "order_line": [
+                    Command.create(
+                        {"product_id": self.product.id, "product_uom_qty": 3}
+                    )
+                ],
+            }
+        )
+        sale.action_confirm()
+        move_lines = sale.picking_ids.move_line_ids
+        move_lines.result_package_id = self.env["stock.package"].create(
+            {"name": "Test Package"}
+        )
+
+        aggregated = move_lines._get_aggregated_product_quantities(except_package=True)
+
+        self.assertFalse(aggregated)
+
     def test_receipt_valued_from_stock_move(self):
         purchase = self.env["purchase.order"].create(
             {
